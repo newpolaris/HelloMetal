@@ -89,8 +89,8 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 	//_metalLayer.contentsScale = [self getScaleFactor];
 	_metalLayer.framebufferOnly = true;
-	//_metalLayer.opaque = true;
-	//_metalLayer.backgroundColor = nil;
+	_metalLayer.opaque = true;
+	_metalLayer.backgroundColor = nil;
 }
 
 - (void)buildVertexBuffers
@@ -124,7 +124,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	id<MTLFunction> fragment = [library newFunctionWithName:@"basicFragment"];
 	
 	MTLRenderPipelineDescriptor *pipelineDescriptor = [MTLRenderPipelineDescriptor new];
-	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	pipelineDescriptor.colorAttachments[0].pixelFormat = self.metalLayer.pixelFormat;
 	pipelineDescriptor.vertexFunction = vertex;
 	pipelineDescriptor.fragmentFunction = fragment;
 	
