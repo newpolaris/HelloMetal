@@ -7,12 +7,11 @@ Implementation of our cross-platform view controller
 
 #import "AAPLViewController.h"
 #import "AAPLRenderer.h"
+#import "MetalView.h"
 
 @implementation AAPLViewController
 {
-    MTKView *_view;
-
-    AAPLRenderer *_renderer;
+    MetalView *_view;
 }
 
 - (void)viewDidLoad
@@ -20,27 +19,13 @@ Implementation of our cross-platform view controller
     [super viewDidLoad];
 
     // Set the view to use the default device
-    _view = (MTKView *)self.view;
-    _view.device = MTLCreateSystemDefaultDevice();
-
-    if(!_view.device)
-    {
-        NSLog(@"Metal is not supported on this device");
-        return;
-    }
-
-    _renderer = [[AAPLRenderer alloc] initWithMetalKitView:_view];
-
-    if(!_renderer)
-    {
-        NSLog(@"Renderer failed initialization");
-        return;
-    }
-
-    // Initialize our renderer with the view size
-    [_renderer mtkView:_view drawableSizeWillChange:_view.drawableSize];
-
-    _view.delegate = _renderer;
+    _view = (MetalView *)self.view;
 }
+
+#if defined(TARGET_IOS) || defined(TARGET_TVOS)
+- (BOOL)prefersStatusBarHidden {
+	return YES;
+}
+#endif // defined(TARGET_IOS) || defined(TARGET_TVOS)
 
 @end
