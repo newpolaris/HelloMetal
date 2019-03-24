@@ -5,14 +5,13 @@ Abstract:
 Implementation of our platform independent renderer class, which performs Metal setup and per frame rendering
 */
 
-@import simd;
-@import MetalKit;
-
+#import <simd/simd.h>
 #import "AAPLRenderer.h"
 
 // Header shared between C code here, which executes Metal API commands, and .metal files, which
 //   uses these types as inputs to the shaders
 #import "AAPLShaderTypes.h"
+#import "mtlpp.hpp"
 
 // Main class performing the rendering
 @implementation AAPLRenderer
@@ -110,7 +109,10 @@ Implementation of our platform independent renderer class, which performs Metal 
         renderEncoder.label = @"MyRenderEncoder";
 
         // Set the region of the drawable to which we'll draw.
-        [renderEncoder setViewport:(MTLViewport){0.0, 0.0, _viewportSize.x, _viewportSize.y, -1.0, 1.0 }];
+        [renderEncoder setViewport:(MTLViewport){
+            0.0, 0.0,
+            static_cast<double>(_viewportSize.x), static_cast<double>(_viewportSize.y),
+            -1.0, 1.0 }];
 
         [renderEncoder setRenderPipelineState:_pipelineState];
 

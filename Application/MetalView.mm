@@ -1,17 +1,17 @@
 #import "MetalView.h"
 #import <QuartzCore/CAMetalLayer.h>
 #import <Metal/Metal.h>
+#import "mtlpp.hpp"
 
 @interface MetalView ()
 @property (nonatomic, strong) CAMetalLayer *metalLayer;
-@property (nonatomic, strong) id<MTLDevice> device;
 @property (nonatomic, strong) id<MTLCommandQueue> commandQueue;
-@property (nonatomic, strong) id<MTLRenderPipelineState> pipeline;
-@property (nonatomic, strong) id<MTLBuffer> positionBuffer;
-@property (nonatomic, strong) id<MTLBuffer> colorBuffer;
+@property mtlpp::RenderPipelineState pipeline;
+@property mtlpp::Buffer positionBuffer;
+@property mtlpp::Buffer colorBuffer;
+@property mtlpp::Device device;
 @property CVDisplayLinkRef displayLink;
 @end
-
 
 @implementation MetalView
 
@@ -83,9 +83,9 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 
 - (void)buildDevice
 {
-	_device = MTLCreateSystemDefaultDevice();
+    _device = mtlpp::Device::CreateSystemDefaultDevice();
 	_metalLayer = (CAMetalLayer *)[self layer];
-	_metalLayer.device = _device;
+	_metalLayer.device = (__bridge id<MTLDevice>)_device.GetPtr();
 	_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 	//_metalLayer.contentsScale = [self getScaleFactor];
 	_metalLayer.framebufferOnly = true;
@@ -108,18 +108,13 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 		0, 1, 0, 1,
 		0, 0, 1, 1,
 	};
-	
-	self.positionBuffer = [self.device newBufferWithBytes:positions
-												   length:sizeof(positions)
-												  options:MTLResourceOptionCPUCacheModeDefault];
-	self.colorBuffer = [self.device newBufferWithBytes:colors
-												length:sizeof(colors)
-											   options:MTLResourceOptionCPUCacheModeDefault];
+    _positionBuffer = _device.NewBuffer(positions, sizeof(positions), mtlpp::ResourceOptions::CpuCacheModeDefaultCache);
+    _colorBuffer = _device.NewBuffer(colors, sizeof(colors), mtlpp::ResourceOptions::CpuCacheModeDefaultCache);
 }
 
 - (void)buildPipeline
 {
-	id<MTLLibrary> library = [self.device newDefaultLibrary];
+	id<MTLLibrary> library = [(__bridge id<MTLDevice>)_device.GetPtr() newDefaultLibrary];
 	id<MTLFunction> vertex = [library newFunctionWithName:@"basicVertex"];
 	id<MTLFunction> fragment = [library newFunctionWithName:@"basicFragment"];
 	
@@ -128,16 +123,16 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	pipelineDescriptor.vertexFunction = vertex;
 	pipelineDescriptor.fragmentFunction = fragment;
 	
-	NSError *error = nil;
-	self.pipeline = [self.device newRenderPipelineStateWithDescriptor:pipelineDescriptor
-																error:&error];
+    ns::Error *error = nullptr;
+    _pipeline = _device.NewRenderPipelineState(ns::Handle{(__bridge void*)pipelineDescriptor}, error);
 	
 	if (!self.pipeline)
 	{
-		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+        NSError* nsError = error ? (__bridge NSError*)error->GetPtr() : nullptr;
+        NSLog(@"Error occurred when creating render pipeline state: %@", nsError);
 	}
 	
-	self.commandQueue = [self.device newCommandQueue];
+    self.commandQueue = (__bridge id<MTLCommandQueue>)_device.NewCommandQueue().GetPtr();
 }
 
 - (void)redraw
@@ -152,19 +147,20 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	renderPass.colorAttachments[0].loadAction = MTLLoadActionClear;
 	
 	id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-	id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPass];
-	[commandEncoder pushDebugGroup:@"screen"];
-	[commandEncoder setRenderPipelineState:self.pipeline];
-	[commandEncoder setVertexBuffer:self.positionBuffer offset:0 atIndex:0];
-	[commandEncoder setVertexBuffer:self.colorBuffer offset:0 atIndex:1];
-	[commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:1];
-	[commandEncoder popDebugGroup];
-	[commandEncoder endEncoding];
+	id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPass];
+    mtlpp::RenderCommandEncoder commandEncoder = ns::Handle{(__bridge void*)encoder};
+    commandEncoder.PushDebugGroup("screen");
+    commandEncoder.SetRenderPipelineState(self.pipeline);
+    commandEncoder.SetVertexBuffer(self.positionBuffer, 0, 0);
+    commandEncoder.SetVertexBuffer(self.colorBuffer, 0, 1);
+    commandEncoder.Draw(mtlpp::PrimitiveType::Triangle, 0, 3, 1);
+    commandEncoder.PopDebugGroup();
+    commandEncoder.EndEncoding();
 	[commandBuffer presentDrawable:drawable];
 	[commandBuffer commit];
 }
 
-// MetalBasic3D-OSX / MetalBasic3D-iOS
+// source from: MetalBasic3D-OSX / MetalBasic3D-iOS
 #if defined(TARGET_IOS) || defined(TARGET_TVOS)
 - (void)didMoveToWindow
 {

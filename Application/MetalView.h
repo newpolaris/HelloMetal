@@ -1,8 +1,8 @@
 #if defined(TARGET_IOS) || defined(TARGET_TVOS)
-@import UIKit;
+#import <UIKit/UIKit.h>
 #define PlatformView UIView
 #else
-@import AppKit;
+#import <AppKit/AppKit.h>
 #define PlatformView NSView
 #endif
 
