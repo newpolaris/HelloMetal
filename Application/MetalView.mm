@@ -1,6 +1,4 @@
 #import "MetalView.h"
-#import <QuartzCore/CAMetalLayer.h>
-#import <Metal/Metal.h>
 #import "mtlpp.hpp"
 
 @interface MetalView ()
@@ -9,20 +7,50 @@
 @property mtlpp::RenderPipelineState pipeline;
 @property mtlpp::Buffer positionBuffer;
 @property mtlpp::Buffer colorBuffer;
-@property mtlpp::Device device;
-@property CVDisplayLinkRef displayLink;
 @end
 
 @implementation MetalView
-
-- (CVReturn) getFrameForTime:(const CVTimeStamp*)outputTime
 {
-	@autoreleasepool {
-		[self redraw];
-		return kCVReturnSuccess;
-	}
+@private
+    
+#ifdef TARGET_IOS
+    CADisplayLink *_displayLink;
+#else
+    CVDisplayLinkRef _displayLink;
+    dispatch_source_t _displaySource;
+#endif
+    
+    mtlpp::Device _device;
+    
+    BOOL _layerSizeDidUpdate;
+    BOOL _gameLoopPaused;
+}
+@synthesize currentDrawable = _currentDrawable;
+
+- (id<MTLDevice>)getDevice
+{
+    return (__bridge id<MTLDevice>)_device.GetPtr();
 }
 
+- (CVReturn)getFrameForTime:(const CVTimeStamp*)outputTime
+{
+    dispatch_async (dispatch_get_main_queue (), ^{
+        [self redraw];
+    });
+    return kCVReturnSuccess;
+}
+
+#if TARGET_IOS
+- (void)dispatchGameLoop
+{
+    // create a game loop timer using a display link
+    _displayLink = [[UIScreen mainScreen] displayLinkWithTarget:self
+                                                       selector:@selector(redraw)];
+    _displayLink.preferredFramesPerSecond = 60;
+    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop]
+                       forMode:NSDefaultRunLoopMode];
+}
+#else
 // This is the renderer output callback function
 static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 								 const CVTimeStamp *now,
@@ -34,42 +62,96 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	CVReturn result = [(__bridge MetalView*)displayLinkContext getFrameForTime:outputTime];
 	return result;
 }
-
-#if defined(TARGET_MACOS)
-- (CALayer*)makeBackingLayer
-{
-	return [CAMetalLayer layer];
-}
-#endif
+#endif // TARGET_OSX
 
 + (Class)layerClass
 {
 	return [CAMetalLayer class];
 }
 
-- (instancetype)initWithCoder:(NSCoder *)aDecoder
+- (id)initWithFrame:(CGRect)frame
 {
-	if ((self = [super initWithCoder:aDecoder]))
+    self = [super initWithFrame:frame];
+    
+    if (self)
+    {
+        [self initCommon];
+    }
+    
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)coder
+{
+	if ((self = [super initWithCoder:coder]))
 	{
-#if defined(TARGET_MACOS)
-		[self setWantsLayer:true];
-#endif // defined(TARGET_MACOS)
-		
-		[self buildDevice];
-		[self buildVertexBuffers];
-		[self buildPipeline];
-		
-#if defined(TARGET_MACOS)
-		CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
-		CVDisplayLinkSetOutputCallback(_displayLink, &dispatchGameLoop, (__bridge void *)(self));
-		CVDisplayLinkStart(_displayLink);
-#endif
+        [self initCommon];
 	}
 	return self;
 }
 
+- (void)initCommon
+{
+#ifdef TARGET_IOS
+    _metalLayer = (CAMetalLayer *)self.layer;
+#else
+    self.wantsLayer = YES;
+    self.layer = _metalLayer = [CAMetalLayer layer];
+#endif
+    
+    _device = mtlpp::Device::CreateSystemDefaultDevice();
+    
+    _metalLayer.device = (__bridge id<MTLDevice>)_device.GetPtr();
+    _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    _metalLayer.framebufferOnly = YES;
+    _metalLayer.opaque = YES;
+    _metalLayer.backgroundColor = nil;
+
+    [self buildVertexBuffers];
+    [self buildPipeline];
+    
+#if defined(TARGET_MACOS)
+    CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
+    CVDisplayLinkSetOutputCallback(_displayLink, &dispatchGameLoop, (__bridge void *)(self));
+    CVDisplayLinkStart(_displayLink);
+#endif
+}
+
 - (void)dealloc
 {
+#ifdef TARGET_IOS
+    [[NSNotificationCenter defaultCenter] removeObserver: self
+                                                    name: UIApplicationDidEnterBackgroundNotification
+                                                  object: nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver: self
+                                                    name: UIApplicationWillEnterForegroundNotification
+                                                  object: nil];
+#endif
+    
+    if (_displayLink)
+    {
+        [self stopGameLoop];
+    }
+}
+
+- (void)stopGameLoop
+{
+    if (_displayLink)
+    {
+#ifdef TARGET_IOS
+        [_displayLink invalidate];
+#else
+        // Stop the display link BEFORE releasing anything in the view
+        // otherwise the display link thread may call into the view and crash
+        // when it encounters something that has been release
+        CVDisplayLinkStop(_displayLink);
+        dispatch_source_cancel(_displaySource);
+        
+        CVDisplayLinkRelease(_displayLink);
+        _displaySource = nil;
+#endif
+    }
 }
 
 - (CGFloat)getScaleFactor
@@ -78,19 +160,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	return [UIScreen mainScreen].scale;
 #else
 	return [self.window.screen backingScaleFactor];
-#endif //  defined(TARGET_IOS) || defined(TARGET_TVOS)
-}
-
-- (void)buildDevice
-{
-    _device = mtlpp::Device::CreateSystemDefaultDevice();
-	_metalLayer = (CAMetalLayer *)[self layer];
-	_metalLayer.device = (__bridge id<MTLDevice>)_device.GetPtr();
-	_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-	//_metalLayer.contentsScale = [self getScaleFactor];
-	_metalLayer.framebufferOnly = true;
-	_metalLayer.opaque = true;
-	_metalLayer.backgroundColor = nil;
+#endif
 }
 
 - (void)buildVertexBuffers
@@ -135,9 +205,17 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
     self.commandQueue = (__bridge id<MTLCommandQueue>)_device.NewCommandQueue().GetPtr();
 }
 
+- (id<CAMetalDrawable>)currentDrawable
+{
+    if (_currentDrawable == nil)
+        _currentDrawable = [_metalLayer nextDrawable];
+    
+    return _currentDrawable;
+}
+
 - (void)redraw
 {
-	id<CAMetalDrawable> drawable = [self.metalLayer nextDrawable];
+	id<CAMetalDrawable> drawable = self.currentDrawable;
 	id<MTLTexture> framebufferTexture = drawable.texture;
 	
 	MTLRenderPassDescriptor *renderPass = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -158,14 +236,14 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
     commandEncoder.EndEncoding();
 	[commandBuffer presentDrawable:drawable];
 	[commandBuffer commit];
+    
+    _currentDrawable = nil;
 }
 
-// source from: MetalBasic3D-OSX / MetalBasic3D-iOS
 #if defined(TARGET_IOS) || defined(TARGET_TVOS)
 - (void)didMoveToWindow
 {
 	self.contentScaleFactor = self.window.screen.nativeScale;
-	// Test: [self getScaleFactor];
 }
 
 - (void)setContentScaleFactor:(CGFloat)contentScaleFactor
@@ -174,12 +252,27 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 	_layerSizeDidUpdate = YES;
 }
 
-- (void)layoutSubviews() {
+- (void)layoutSubviews {
 	[super layoutSubviews];
 	_layerSizeDidUpdate = YES;
 }
 #else
+- (void)setFrameSize:(NSSize)newSize
+{
+    [super setFrameSize:newSize];
+    _layerSizeDidUpdate = YES;
+}
 
+- (void)setBoundsSize:(NSSize)newSize
+{
+    [super setBoundsSize:newSize];
+    _layerSizeDidUpdate = YES;
+}
+- (void)viewDidChangeBackingProperties
+{
+    [super viewDidChangeBackingProperties];
+    _layerSizeDidUpdate = YES;
+}
 #endif
 
 @end

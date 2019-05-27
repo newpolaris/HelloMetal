@@ -62,9 +62,7 @@
 		3A3532CD1E99974500C194AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3ACD21331EAE60D2000D1DED /* AAPLAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AAPLAppDelegate.h; sourceTree = "<group>"; };
 		3ACD21341EAE60D2000D1DED /* AAPLAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AAPLAppDelegate.m; sourceTree = "<group>"; };
-		3ED283CC1EC2C6D200A23F58 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		47D4DAE047D4E21000000001 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
-		4D41D9504D41DAF000000001 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		66323BEB223F445A004E7B08 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		665304042247AC41008EF6F2 /* mtlpp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mtlpp.hpp; sourceTree = "<group>"; };
 		665304052247AC41008EF6F2 /* mtlpp.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = mtlpp.mm; sourceTree = "<group>"; };
@@ -131,7 +129,6 @@
 		3A35327E1E99974500C194AD = {
 			isa = PBXGroup;
 			children = (
-				3ED283CC1EC2C6D200A23F58 /* README.md */,
 				665304042247AC41008EF6F2 /* mtlpp.hpp */,
 				665304052247AC41008EF6F2 /* mtlpp.mm */,
 				3A3532831E99974500C194AD /* Renderer */,
@@ -203,7 +200,6 @@
 		4D410D904D410D6000000001 /* LICENSE */ = {
 			isa = PBXGroup;
 			children = (
-				4D41D9504D41DAF000000001 /* LICENSE.txt */,
 			);
 			path = LICENSE;
 			sourceTree = "<group>";
@@ -273,6 +269,7 @@
 				TargetAttributes = {
 					3A35328E1E99974500C194AD = {
 						CreatedOnToolsVersion = 8.3;
+						DevelopmentTeam = 4FGCNSDRVP;
 						ProvisioningStyle = Automatic;
 					};
 					3A3532A81E99974500C194AD = {
@@ -281,7 +278,7 @@
 					};
 					3A3532BE1E99974500C194AD = {
 						CreatedOnToolsVersion = 8.3;
-						DevelopmentTeam = 8DTU264W5M;
+						DevelopmentTeam = 4FGCNSDRVP;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -291,6 +288,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -523,7 +521,7 @@
 			baseConfigurationReference = 47D4DAE047D4E21000000001 /* SampleCode.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 4FGCNSDRVP;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SDKROOT)/../../../../AppleTVOS.platform/Developer/SDKs/AppleTVOS11.0.sdk/System/Library/Frameworks",
@@ -548,7 +546,7 @@
 			baseConfigurationReference = 47D4DAE047D4E21000000001 /* SampleCode.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 4FGCNSDRVP;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SDKROOT)/../../../../AppleTVOS.platform/Developer/SDKs/AppleTVOS11.0.sdk/System/Library/Frameworks",
@@ -621,7 +619,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 8DTU264W5M;
+				DEVELOPMENT_TEAM = 4FGCNSDRVP;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					TARGET_MACOS,
@@ -643,7 +641,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 8DTU264W5M;
+				DEVELOPMENT_TEAM = 4FGCNSDRVP;
 				GCC_PREPROCESSOR_DEFINITIONS = TARGET_MACOS;
 				INFOPLIST_FILE = Application/macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";

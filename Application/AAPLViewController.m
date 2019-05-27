@@ -26,6 +26,24 @@ Implementation of our cross-platform view controller
 - (BOOL)prefersStatusBarHidden {
 	return YES;
 }
-#endif // defined(TARGET_IOS) || defined(TARGET_TVOS)
+#endif
+
+#ifdef TARGET_IOS
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    
+    // run the game loop
+    [_view dispatchGameLoop];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    
+    // end the gameloop
+    [_view stopGameLoop];
+}
+#endif
 
 @end
