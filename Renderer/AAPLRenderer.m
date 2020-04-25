@@ -56,8 +56,35 @@ Implementation of our platform independent renderer class, which performs Metal 
         pipelineStateDescriptor.fragmentFunction = fragmentFunction;
         pipelineStateDescriptor.colorAttachments[0].pixelFormat = mtkView.colorPixelFormat;
 
+        MTLRenderPipelineReflection* reflectionObj;
+        MTLPipelineOption option = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
         _pipelineState = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
+                                                               options:option
+                                                            reflection:&reflectionObj
                                                                  error:&error];
+
+        for (MTLArgument *arg in reflectionObj.vertexArguments)
+        {
+            NSLog(@"Found arg: %@\n", arg.name);
+            NSLog(@"arg index: %d\n", (int)arg.index);
+            
+            // arg.argumentType
+            // arg.textureType
+            
+            if (arg.bufferDataType == MTLDataTypeStruct)
+            {
+                for( MTLStructMember* uniform in arg.bufferStructType.members )
+                {
+                    NSLog(@"uniform: %@ type:%lu, location: %lu", uniform.name, (unsigned long)uniform.dataType, (unsigned long)uniform.offset);
+                }
+            }
+        }
+        for (MTLArgument *arg in reflectionObj.fragmentArguments)
+        {
+            NSLog(@"Found arg: %@\n", arg.name);
+            NSLog(@"arg index: %d\n", (int)arg.index);
+        }
+        
         if (!_pipelineState)
         {
             // Pipeline State creation could fail if we haven't properly set up our pipeline descriptor.
